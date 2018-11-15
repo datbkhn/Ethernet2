@@ -28,7 +28,8 @@ uint8_t SPI_CS;
 void W5500Class::init(uint8_t ss_pin)
 {
   SPI_CS = ss_pin;
-
+  pinMode(PA2, OUTPUT); // Reset pin
+  digitalWrite(PA2, HIGH);
   delay(1000);
   initSS();
   SPI.begin();
