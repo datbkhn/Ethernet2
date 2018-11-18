@@ -23,16 +23,27 @@ W5500Class w5500;
 
 // SPI details
 SPISettings wiznet_SPI_settings(8000000, MSBFIRST, SPI_MODE0);
+#ifdef USING_SPI2
+SPIClass SPI_2(2); //Create an instance of the SPI Class called SPI_2 that uses the 2nd SPI Port
+#endif
 uint8_t SPI_CS;
 
 void W5500Class::init(uint8_t ss_pin)
 {
   SPI_CS = ss_pin;
+#if defined(USING_SPI2)
+  pinMode(PB10, OUTPUT); // Reset pin
+  digitalWrite(PB10, HIGH);
+  delay(1000);
+  initSS();
+  SPI_2.begin();
+#else
   pinMode(PA2, OUTPUT); // Reset pin
   digitalWrite(PA2, HIGH);
   delay(1000);
   initSS();
   SPI.begin();
+#endif
   w5500.swReset();
   for (int i=0; i<MAX_SOCK_NUM; i++) {
     uint8_t cntl_byte = (0x0C + (i<<5));
@@ -103,6 +114,16 @@ void W5500Class::read_data(SOCKET s, volatile uint16_t src, volatile uint8_t *ds
 
 uint8_t W5500Class::write(uint16_t _addr, uint8_t _cb, uint8_t _data)
 {
+#if defined(USING_SPI2)
+    SPI_2.beginTransaction(wiznet_SPI_settings);
+    setSS();  
+    SPI_2.transfer(_addr >> 8);
+    SPI_2.transfer(_addr & 0xFF);
+    SPI_2.transfer(_cb);
+    SPI_2.transfer(_data);
+    resetSS();
+    SPI_2.endTransaction();
+#else
     SPI.beginTransaction(wiznet_SPI_settings);
     setSS();  
     SPI.transfer(_addr >> 8);
@@ -111,12 +132,24 @@ uint8_t W5500Class::write(uint16_t _addr, uint8_t _cb, uint8_t _data)
     SPI.transfer(_data);
     resetSS();
     SPI.endTransaction();
-
+#endif
     return 1;
 }
 
 uint16_t W5500Class::write(uint16_t _addr, uint8_t _cb, const uint8_t *_buf, uint16_t _len)
 {
+#if defined(USING_SPI2)
+    SPI_2.beginTransaction(wiznet_SPI_settings);
+    setSS();
+    SPI_2.transfer(_addr >> 8);
+    SPI_2.transfer(_addr & 0xFF);
+    SPI_2.transfer(_cb);
+    for (uint16_t i=0; i<_len; i++){
+        SPI_2.transfer(_buf[i]);
+    }
+    resetSS();
+    SPI_2.endTransaction();
+#else
     SPI.beginTransaction(wiznet_SPI_settings);
     setSS();
     SPI.transfer(_addr >> 8);
@@ -127,12 +160,22 @@ uint16_t W5500Class::write(uint16_t _addr, uint8_t _cb, const uint8_t *_buf, uin
     }
     resetSS();
     SPI.endTransaction();
-
+#endif
     return _len;
 }
 
 uint8_t W5500Class::read(uint16_t _addr, uint8_t _cb)
 {
+#if defined(USING_SPI2)
+    SPI_2.beginTransaction(wiznet_SPI_settings);
+    setSS();
+    SPI_2.transfer(_addr >> 8);
+    SPI_2.transfer(_addr & 0xFF);
+    SPI_2.transfer(_cb);
+    uint8_t _data = SPI_2.transfer(0);
+    resetSS();
+    SPI_2.endTransaction();
+#else
     SPI.beginTransaction(wiznet_SPI_settings);
     setSS();
     SPI.transfer(_addr >> 8);
@@ -141,12 +184,24 @@ uint8_t W5500Class::read(uint16_t _addr, uint8_t _cb)
     uint8_t _data = SPI.transfer(0);
     resetSS();
     SPI.endTransaction();
-
+#endif
     return _data;
 }
 
 uint16_t W5500Class::read(uint16_t _addr, uint8_t _cb, uint8_t *_buf, uint16_t _len)
 { 
+#if defined(USING_SPI2)
+    SPI_2.beginTransaction(wiznet_SPI_settings);
+    setSS();
+    SPI_2.transfer(_addr >> 8);
+    SPI_2.transfer(_addr & 0xFF);
+    SPI_2.transfer(_cb);
+    for (uint16_t i=0; i<_len; i++){
+        _buf[i] = SPI_2.transfer(0);
+    }
+    resetSS();
+    SPI_2.endTransaction();
+#else
     SPI.beginTransaction(wiznet_SPI_settings);
     setSS();
     SPI.transfer(_addr >> 8);
@@ -157,7 +212,7 @@ uint16_t W5500Class::read(uint16_t _addr, uint8_t _cb, uint8_t *_buf, uint16_t _
     }
     resetSS();
     SPI.endTransaction();
-
+#endif
     return _len;
 }
 
@@ -172,6 +227,16 @@ void W5500Class::execCmdSn(SOCKET s, SockCMD _cmd) {
 
 uint8_t W5500Class::readVersion(void)
 {
+#if defined(USING_SPI2)
+    SPI_2.beginTransaction(wiznet_SPI_settings);
+    setSS();
+    SPI_2.transfer( 0x00 );
+    SPI_2.transfer( 0x39 );
+    SPI_2.transfer( 0x01);
+    uint8_t _data = SPI_2.transfer(0);
+    resetSS();
+    SPI_2.endTransaction();
+#else
     SPI.beginTransaction(wiznet_SPI_settings);
     setSS();
     SPI.transfer( 0x00 );
@@ -180,7 +245,7 @@ uint8_t W5500Class::readVersion(void)
     uint8_t _data = SPI.transfer(0);
     resetSS();
     SPI.endTransaction();
-
+#endif
     return _data;
 }
 

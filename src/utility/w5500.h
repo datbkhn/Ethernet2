@@ -130,7 +130,13 @@ public:
 class W5500Class {
 
 public:
-  void init(uint8_t ss_pin = 10);
+#if defined(USING_SPI2)
+  void init(uint8_t ss_pin = PB12);
+#else
+  void init(uint8_t ss_pin = PA0);
+//#else
+//  void init(uint8_t ss_pin = 10);
+#endif
   uint8_t readVersion(void);
 
   /**
